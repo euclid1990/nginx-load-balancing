@@ -1,0 +1,77 @@
+version: '2'
+services:
+  application:
+    image: ubuntu
+    volumes:
+      - ./source-code:/var/www/app
+
+  mariadb:
+    image: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: mydb
+      MYSQL_USER: guest
+      MYSQL_PASSWORD: 123456789Aa@
+    volumes:
+      - ./mariadb:/var/lib/mysql
+      - ./source-code/mydb.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+  nginx-master:
+    image: nginx
+    ports:
+      - "8696:80"
+    links:
+      - nginx-backend1
+      - nginx-backend2
+    volumes:
+      - ./logs/nginx-master:/var/log/nginx
+      - ./nginx-conf/master:/etc/nginx/conf.d
+
+  nginx-backend1:
+    image: nginx
+    ports:
+      - "8697:80"
+    links:
+      - php1
+    volumes_from:
+      - application
+    volumes:
+      - ./logs/nginx-backend1:/var/log/nginx
+      - ./nginx-conf/backend1:/etc/nginx/conf.d
+    environment:
+      BACKEND: backend1
+
+  php1:
+    image: euclid1990/php5.6-fpm
+    volumes_from:
+      - application
+
+  nginx-backend2:
+    image: nginx
+    ports:
+      - "8698:80"
+    links:
+      - php2
+    volumes_from:
+      - application
+    volumes:
+      - ./logs/nginx-backend2:/var/log/nginx
+      - ./nginx-conf/backend2:/etc/nginx/conf.d
+    environment:
+      BACKEND: backend2
+
+  php2:
+    image: euclid1990/php5.6-fpm
+    volumes_from:
+      - application
+
+  dockergen:
+    image: jwilder/docker-gen
+    links:
+      - nginx-master
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    volumes_from:
+      - nginx-master
+    command: >
+      -config /etc/nginx/conf.d/docker-gen.cfg

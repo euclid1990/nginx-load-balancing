@@ -1,0 +1,4 @@
+/sourcecode/*.log
+/logs/
+/mariadb/
+/nginx-conf/master/default.conf

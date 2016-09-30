@@ -1,0 +1,36 @@
+# Resolver a name of container from docker host
+{{ range $host, $containers := groupByMulti $ "Env.BACKEND" "," }}
+    {{ range $index, $value := $containers }}
+    {{ $network := index $value.Networks 0 }}
+    {{ $alias := index $value.Labels "com.docker.compose.service" }}
+
+upstream {{ $alias }} { server {{ $network.IP }}; }
+
+    {{ end }}
+{{ end }}
+
+upstream backend {
+    server nginx-backend1;
+    server nginx-backend2;
+}
+
+map $cookie_backend $sticky_backend {
+    backend1 nginx-backend1;
+    backend2 nginx-backend2;
+    default backend;
+}
+
+server {
+    listen 80;
+
+    server_name localhost;
+
+    location / {
+        resolver 127.0.0.1;
+        set $target http://$sticky_backend;
+        proxy_pass $target;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
